@@ -9,7 +9,7 @@ import datetime
 NOTION_TOKEN = st.secrets["NOTION_TOKEN"]
 DATABASE_ID = st.secrets["DATABASE_ID"]     # 성도 나눔방
 BIBLE_DB_ID = st.secrets["BIBLE_DB_ID"]     # 매일 성경
-PASTOR_DB_ID = st.secrets["PASTOR_DB_ID"]   # 💡 추가됨: 말씀과 기도 (목회자 전용)
+PASTOR_DB_ID = st.secrets["PASTOR_DB_ID"]   # 말씀과 기도 (목회자 전용)
 
 headers = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
@@ -50,7 +50,7 @@ def get_bible_schedule(target_date):
     response = requests.post(url, headers=headers, json=payload)
     return response.json()
 
-# --- 💡 데이터 읽어오기 (말씀과 기도 전용!) ---
+# --- 데이터 읽어오기 (말씀과 기도 전용!) ---
 def get_pastor_data():
     url = f"https://api.notion.com/v1/databases/{PASTOR_DB_ID}/query"
     payload = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
@@ -97,7 +97,6 @@ with tab2:
     st.divider()
     
     with st.spinner("자료를 불러오는 중입니다..."):
-        # 💡 이제 성도 나눔방이 아니라, 목회자 전용 창고에서 데이터를 가져옵니다!
         pastor_data = get_pastor_data()
         results = pastor_data.get("results", [])
                 
@@ -105,16 +104,20 @@ with tab2:
             st.info("아직 올라온 자료가 없습니다.")
         else:
             for page in results:
-                try: title = page["properties"]["이름"]["title"][0]["plain_text"]
+                # 💡 노션 표의 '말씀과 기도' 기둥에서 제목 가져오기
+                try: title = page["properties"]["말씀과 기도"]["title"][0]["plain_text"]
                 except: title = "제목 없음"
-                try: category = page["properties"]["카테고리"]["select"]["name"]
-                except: category = "분류 없음"
+                
+                # 💡 내용 가져오기
                 try: content = page["properties"]["내용"]["rich_text"][0]["plain_text"]
                 except: content = "내용이 없습니다."
-                try: date_str = page["created_time"].split("T")[0]
-                except: date_str = "날짜 알 수 없음"
+                
+                # 💡 '날짜' 기둥에서 날짜 가져오기 (비어있으면 자동 생성일로 대체)
+                try: date_str = page["properties"]["날짜"]["date"]["start"]
+                except: date_str = page["created_time"].split("T")[0]
 
-                with st.expander(f"📅 {date_str} | [{category}] {title}"):
+                # 카테고리 없이 깔끔하게 제목과 날짜만 띄우기
+                with st.expander(f"📅 {date_str} | {title}"):
                     st.write(content)
 
 # --- [탭 3] 나눔 작성하기 (성도용) ---
