@@ -4,11 +4,11 @@ import json
 import datetime
 
 # ==========================================
-# 1. API 키 설정 (보안 유지 + 매일 성경 ID 추가!)
+# 1. API 키 설정
 # ==========================================
 NOTION_TOKEN = st.secrets["NOTION_TOKEN"]
 DATABASE_ID = st.secrets["DATABASE_ID"]
-BIBLE_DB_ID = st.secrets["BIBLE_DB_ID"] # 💡 새로 추가된 매일 성경 표 ID!
+BIBLE_DB_ID = st.secrets["BIBLE_DB_ID"]
 
 headers = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
@@ -16,7 +16,7 @@ headers = {
     "Notion-Version": "2022-06-28"
 }
 
-# --- 데이터 보내기 (나눔방) ---
+# --- 데이터 보내기 ---
 def send_to_notion(title, category, content):
     url = "https://api.notion.com/v1/pages"
     data = {
@@ -30,7 +30,7 @@ def send_to_notion(title, category, content):
     response = requests.post(url, headers=headers, data=json.dumps(data))
     return response.status_code
 
-# --- 데이터 읽어오기 (나눔방) ---
+# --- 데이터 읽어오기 ---
 def get_from_notion():
     url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
     payload = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
@@ -40,7 +40,6 @@ def get_from_notion():
 # --- 데이터 읽어오기 (매일 성경 전용!) ---
 def get_bible_schedule(target_date):
     url = f"https://api.notion.com/v1/databases/{BIBLE_DB_ID}/query"
-    # 선택한 날짜와 똑같은 데이터만 쏙 골라오라는 마법의 필터!
     payload = {
         "filter": {
             "property": "날짜",
@@ -63,8 +62,6 @@ tab1, tab2, tab3, tab4 = st.tabs(["📖 매일 성경", "🙏 말씀과 기도",
 # --- [탭 1] 매일 성경 ---
 with tab1:
     st.subheader("📖 달력을 눌러 매일 성경을 확인하세요")
-    
-    # 예쁜 달력 띄우기 (기본값은 오늘 날짜)
     selected_date = st.date_input("날짜 선택", datetime.date.today())
     st.divider()
     
@@ -76,13 +73,11 @@ with tab1:
             st.info(f"📅 {selected_date} : 아직 등록된 매일 성경 일정이 없습니다.")
         else:
             for page in results:
-                # 노션에서 데이터 뽑아오기
                 try: title = page["properties"]["이름"]["title"][0]["plain_text"]
                 except: title = "제목 없음"
                 try: verses = page["properties"]["본문"]["rich_text"][0]["plain_text"]
                 except: verses = "본문 없음"
                 
-                # 화면에 예쁘게 띄우기
                 st.success(f"**오늘의 주제:** {title}")
                 st.write(f"📖 **읽을 본문:** {verses}")
 
@@ -95,7 +90,16 @@ with tab2:
     
     with st.spinner("자료를 불러오는 중입니다..."):
         notion_data = get_from_notion()
-        admin_posts = [p for p in notion_data.get("results", []) if p["properties"].get("카테고리", {}).get("select", {}).get("name") in ["말씀 묵상", "영성 도우미"]]
+        results = notion_data.get("results", [])
+        
+        admin_posts = []
+        for p in results:
+            # 에러 방지용 안전한 코드 (빈칸이 있어도 패스합니다!)
+            try: cat = p["properties"]["카테고리"]["select"]["name"]
+            except (KeyError, TypeError): cat = ""
+            
+            if cat in ["말씀 묵상", "영성 도우미"]:
+                admin_posts.append(p)
                 
         if not admin_posts:
             st.info("아직 올라온 자료가 없습니다.")
@@ -118,7 +122,10 @@ with tab3:
     st.write("공동체와 함께 감사와 기도제목을 나누는 공간입니다.")
     with st.form("share_form"):
         input_title = st.text_input("제목 (예: 오늘 하루도 지켜주심에 감사합니다)")
+        
+        # 💡 원하시던 4가지 카테고리로 업데이트!
         input_category = st.selectbox("카테고리", ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"])
+        
         input_content = st.text_area("나눌 내용을 자유롭게 적어주세요", height=200)
         submitted = st.form_submit_button("나눔 등록하기")
 
@@ -141,7 +148,17 @@ with tab4:
 
     with st.spinner("나눔을 불러오는 중입니다..."):
         notion_data = get_from_notion()
-        user_posts = [p for p in notion_data.get("results", []) if p["properties"].get("카테고리", {}).get("select", {}).get("name") in ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"]]
+        results = notion_data.get("results", [])
+        
+        user_posts = []
+        for p in results:
+            # 에러 방지용 안전한 코드
+            try: cat = p["properties"]["카테고리"]["select"]["name"]
+            except (KeyError, TypeError): cat = ""
+            
+            # 💡 원하시던 4가지 카테고리만 보이도록 업데이트!
+            if cat in ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"]:
+                user_posts.append(p)
 
         if not user_posts:
             st.info("아직 등록된 나눔이 없습니다. 첫 번째 나눔의 주인공이 되어보세요!")
