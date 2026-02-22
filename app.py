@@ -4,11 +4,12 @@ import json
 import datetime
 
 # ==========================================
-# 1. API 키 설정
+# 1. API 키 설정 (4개의 열쇠 모두 장착!)
 # ==========================================
 NOTION_TOKEN = st.secrets["NOTION_TOKEN"]
-DATABASE_ID = st.secrets["DATABASE_ID"]
-BIBLE_DB_ID = st.secrets["BIBLE_DB_ID"]
+DATABASE_ID = st.secrets["DATABASE_ID"]     # 성도 나눔방
+BIBLE_DB_ID = st.secrets["BIBLE_DB_ID"]     # 매일 성경
+PASTOR_DB_ID = st.secrets["PASTOR_DB_ID"]   # 💡 추가됨: 말씀과 기도 (목회자 전용)
 
 headers = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
@@ -16,7 +17,7 @@ headers = {
     "Notion-Version": "2022-06-28"
 }
 
-# --- 데이터 보내기 ---
+# --- 데이터 보내기 (성도 나눔방) ---
 def send_to_notion(title, category, content):
     url = "https://api.notion.com/v1/pages"
     data = {
@@ -30,14 +31,14 @@ def send_to_notion(title, category, content):
     response = requests.post(url, headers=headers, data=json.dumps(data))
     return response.status_code
 
-# --- 데이터 읽어오기 ---
+# --- 데이터 읽어오기 (성도 나눔방) ---
 def get_from_notion():
     url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
     payload = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
     response = requests.post(url, headers=headers, json=payload)
     return response.json()
 
-# --- 데이터 읽어오기 (매일 성경 전용!) ---
+# --- 데이터 읽어오기 (매일 성경) ---
 def get_bible_schedule(target_date):
     url = f"https://api.notion.com/v1/databases/{BIBLE_DB_ID}/query"
     payload = {
@@ -46,6 +47,13 @@ def get_bible_schedule(target_date):
             "date": {"equals": str(target_date)}
         }
     }
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()
+
+# --- 💡 데이터 읽어오기 (말씀과 기도 전용!) ---
+def get_pastor_data():
+    url = f"https://api.notion.com/v1/databases/{PASTOR_DB_ID}/query"
+    payload = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
     response = requests.post(url, headers=headers, json=payload)
     return response.json()
 
@@ -65,7 +73,7 @@ with tab1:
     selected_date = st.date_input("날짜 선택", datetime.date.today())
     st.divider()
     
-    with st.spinner("해당 날짜의 본문을 노션에서 찾는 중입니다..."):
+    with st.spinner("해당 날짜의 본문을 찾는 중입니다..."):
         bible_data = get_bible_schedule(selected_date)
         results = bible_data.get("results", [])
         
@@ -89,22 +97,14 @@ with tab2:
     st.divider()
     
     with st.spinner("자료를 불러오는 중입니다..."):
-        notion_data = get_from_notion()
-        results = notion_data.get("results", [])
-        
-        admin_posts = []
-        for p in results:
-            # 에러 방지용 안전한 코드 (빈칸이 있어도 패스합니다!)
-            try: cat = p["properties"]["카테고리"]["select"]["name"]
-            except (KeyError, TypeError): cat = ""
-            
-            if cat in ["말씀 묵상", "영성 도우미"]:
-                admin_posts.append(p)
+        # 💡 이제 성도 나눔방이 아니라, 목회자 전용 창고에서 데이터를 가져옵니다!
+        pastor_data = get_pastor_data()
+        results = pastor_data.get("results", [])
                 
-        if not admin_posts:
+        if not results:
             st.info("아직 올라온 자료가 없습니다.")
         else:
-            for page in admin_posts:
+            for page in results:
                 try: title = page["properties"]["이름"]["title"][0]["plain_text"]
                 except: title = "제목 없음"
                 try: category = page["properties"]["카테고리"]["select"]["name"]
@@ -122,10 +122,7 @@ with tab3:
     st.write("공동체와 함께 감사와 기도제목을 나누는 공간입니다.")
     with st.form("share_form"):
         input_title = st.text_input("제목 (예: 오늘 하루도 지켜주심에 감사합니다)")
-        
-        # 💡 원하시던 4가지 카테고리로 업데이트!
         input_category = st.selectbox("카테고리", ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"])
-        
         input_content = st.text_area("나눌 내용을 자유롭게 적어주세요", height=200)
         submitted = st.form_submit_button("나눔 등록하기")
 
@@ -152,11 +149,9 @@ with tab4:
         
         user_posts = []
         for p in results:
-            # 에러 방지용 안전한 코드
             try: cat = p["properties"]["카테고리"]["select"]["name"]
             except (KeyError, TypeError): cat = ""
             
-            # 💡 원하시던 4가지 카테고리만 보이도록 업데이트!
             if cat in ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"]:
                 user_posts.append(p)
 
