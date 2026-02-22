@@ -62,7 +62,15 @@ def get_pastor_data():
 # 2. 어플 화면 그리기 (4개의 탭)
 # ==========================================
 st.set_page_config(page_title="토다 나눔방", page_icon="🌿")
-st.title("🌿 토다 공동체 나눔방")
+# 기존 타이틀을 지우고 이 코드를 넣습니다! (새로고침 마법)
+st.markdown(
+    """
+    <a href="/" target="_self" style="text-decoration: none; color: inherit;">
+        <h1 style="margin-bottom: 0px; cursor: pointer;">🌿 토다 공동체 나눔방</h1>
+    </a>
+    """, 
+    unsafe_allow_html=True
+)
 st.subheader("예수님을 닮아가는 우리의 매일의 기록")
 
 tab1, tab2, tab3, tab4 = st.tabs(["📖 매일 성경", "🙏 말씀과 기도", "📝 나눔 작성", "💬 나눔 모아보기"])
