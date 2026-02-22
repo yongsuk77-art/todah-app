@@ -118,7 +118,7 @@ with tab3:
     st.write("공동체와 함께 감사와 기도제목을 나누는 공간입니다.")
     with st.form("share_form"):
         input_title = st.text_input("제목 (예: 오늘 하루도 지켜주심에 감사합니다)")
-        input_category = st.selectbox("카테고리", ["감사 나눔", "기도제목 나눔"])
+        input_category = st.selectbox("카테고리", ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"])
         input_content = st.text_area("나눌 내용을 자유롭게 적어주세요", height=200)
         submitted = st.form_submit_button("나눔 등록하기")
 
@@ -141,7 +141,7 @@ with tab4:
 
     with st.spinner("나눔을 불러오는 중입니다..."):
         notion_data = get_from_notion()
-        user_posts = [p for p in notion_data.get("results", []) if p["properties"].get("카테고리", {}).get("select", {}).get("name") in ["감사 나눔", "기도제목 나눔"]]
+        user_posts = [p for p in notion_data.get("results", []) if p["properties"].get("카테고리", {}).get("select", {}).get("name") in ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"]]
 
         if not user_posts:
             st.info("아직 등록된 나눔이 없습니다. 첫 번째 나눔의 주인공이 되어보세요!")
