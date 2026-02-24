@@ -53,18 +53,14 @@ def get_pastor_data():
     payload = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
     return requests.post(url, headers=headers, json=payload).json()
 
-# --- 💡 파이썬이 지워도 절대 죽지 않는 '좀비 스크롤 모터' ---
+# --- 💡 서버 차단을 피하는 안전한 '방탄 스마트 스크롤 모터' ---
 def get_smart_scroll_html(box_id, height, content, speed=40):
-    # 모터를 화면 바깥(window)에 숨겨두어 새로고침해도 계속 작동하게 만듭니다!
-    js_code = f"if(!window['timer_{box_id}']){{ window['timer_{box_id}'] = setInterval(function(){{ var b = window.parent.document.getElementById('{box_id}') || document.getElementById('{box_id}'); if(b && b.dataset.hover !== '1'){{ b.scrollTop += 1; if(b.scrollTop + b.clientHeight >= b.scrollHeight - 1){{ b.scrollTop = 0; }} }} }}, {speed}); }}"
+    # 보안 에러 없이 독립적으로 안전하게 돌아가는 순수 자바스크립트입니다.
+    js_code = f"var box = document.getElementById('{box_id}'); if (box && box.dataset.init !== '1') {{ box.dataset.init = '1'; box.dataset.hover = '0'; box.addEventListener('mouseenter', ()=>box.dataset.hover='1'); box.addEventListener('mouseleave', ()=>box.dataset.hover='0'); box.addEventListener('touchstart', ()=>box.dataset.hover='1'); box.addEventListener('touchend', ()=>setTimeout(()=>box.dataset.hover='0', 1500)); setInterval(function() {{ if (box.dataset.hover === '0') {{ box.scrollTop += 1; if (Math.ceil(box.scrollTop) + box.clientHeight >= box.scrollHeight) {{ box.scrollTop = 0; }} }} }}, {speed}); }}"
     
     return f"""
-    <div id="{box_id}" class="smart-scroll-box" style="height: {height}px;" 
-         onmouseenter="this.dataset.hover='1'" 
-         onmouseleave="this.dataset.hover='0'" 
-         ontouchstart="this.dataset.hover='1'" 
-         ontouchend="setTimeout(()=>this.dataset.hover='0', 1500)">
-        <div style="display: flex; flex-direction: column; gap: 15px;">
+    <div id="{box_id}" class="smart-scroll-box" style="height: {height}px; overflow-y: auto;">
+        <div style="display: flex; flex-direction: column; gap: 15px; padding-bottom: 50px;">
             {content}
         </div>
     </div>
@@ -78,7 +74,7 @@ st.set_page_config(page_title="토다 나눔방", page_icon="🌿", layout="wide
 
 st.markdown("""
 <style>
-    .smart-scroll-box { overflow-y: auto; padding: 15px; background: white; border: 1px solid #eee; border-radius: 0 0 10px 10px; }
+    .smart-scroll-box { padding: 15px; background: white; border: 1px solid #eee; border-radius: 0 0 10px 10px; }
     .smart-scroll-box::-webkit-scrollbar { width: 6px; }
     .smart-scroll-box::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px;}
     .smart-scroll-box::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
@@ -152,20 +148,20 @@ with tab0:
             st.markdown(get_smart_scroll_html("scroll_bible", 550, bible_verses.replace(chr(10), "<br>")), unsafe_allow_html=True)
         with col2:
             st.markdown('<div class="board-title" style="background-color: #a5d6a7;">🌿 [ 오늘의 성경 본문 묵상 자료 ]</div>', unsafe_allow_html=True)
-            # 💡 목사님 묵상 칸을 아주 시원하게(400px) 키우고 자동 스크롤을 달았습니다!
-            st.markdown(get_smart_scroll_html("scroll_pastor", 400, f"<b>[{pastor_title}]</b><br><br>{pastor_content.replace(chr(10), '<br>')}", speed=50), unsafe_allow_html=True)
+            # 💡 가운데 묵상 자료를 380px로 크게 늘렸습니다!
+            st.markdown(get_smart_scroll_html("scroll_pastor", 380, f"<b>[{pastor_title}]</b><br><br>{pastor_content.replace(chr(10), '<br>')}", speed=45), unsafe_allow_html=True)
             
             st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
             
             col2_1, col2_2 = st.columns(2)
             with col2_1:
                 st.markdown('<div class="board-title" style="background-color: #e1bee7;">🙏 감사나눔</div>', unsafe_allow_html=True)
-                # 💡 감사나눔 칸을 아주 귀엽게(100px) 줄였습니다!
-                st.markdown(get_smart_scroll_html("scroll_gamsa", 100, gamsa_list), unsafe_allow_html=True)
+                # 💡 감사나눔 칸을 130px로 아기자기하게 줄였습니다!
+                st.markdown(get_smart_scroll_html("scroll_gamsa", 130, gamsa_list), unsafe_allow_html=True)
             with col2_2:
                 st.markdown('<div class="board-title" style="background-color: #bbdefb;">💌 기도제목 나눔</div>', unsafe_allow_html=True)
-                # 💡 기도제목 칸을 아주 귀엽게(100px) 줄였습니다!
-                st.markdown(get_smart_scroll_html("scroll_gido", 100, gido_list), unsafe_allow_html=True)
+                # 💡 기도제목 칸을 130px로 아기자기하게 줄였습니다!
+                st.markdown(get_smart_scroll_html("scroll_gido", 130, gido_list), unsafe_allow_html=True)
         with col3:
             st.markdown('<div class="board-title" style="background-color: #ffcc80;">💬 [ 말씀 묵상 나눔 ]</div>', unsafe_allow_html=True)
             st.markdown(get_smart_scroll_html("scroll_muksang", 550, muksang_list), unsafe_allow_html=True)
