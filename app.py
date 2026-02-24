@@ -55,9 +55,10 @@ def get_pastor_data():
     return requests.post(url, headers=headers, json=payload).json()
 
 def get_smart_scroll_html(box_id, height, content):
+    # 💡 글이 끝났을 때 바로 훅! 올라가지 않고 살짝 여유(padding-bottom 80px)를 주었습니다.
     return f"""
     <div id="{box_id}" class="smart-scroll-box" style="height: {height}px; overflow-y: auto;">
-        <div style="display: flex; flex-direction: column; gap: 15px; padding-bottom: 50px;">
+        <div style="display: flex; flex-direction: column; gap: 15px; padding-bottom: 80px;">
             {content}
         </div>
     </div>
@@ -144,7 +145,7 @@ with tab0:
             st.markdown(get_smart_scroll_html("scroll_bible", 550, bible_verses.replace(chr(10), "<br>")), unsafe_allow_html=True)
         with col2:
             st.markdown('<div class="board-title" style="background-color: #a5d6a7;">🌿 [ 오늘의 성경 본문 묵상 자료 ]</div>', unsafe_allow_html=True)
-            # 💡 목회자 묵상 자료: 모터(ID)를 달지 않고, 얌전한 수동 스크롤 박스로 만들었습니다! (크기 380px 유지)
+            # 수동 스크롤 박스 (크기 380px)
             st.markdown(f'<div class="smart-scroll-box" style="height: 380px; overflow-y: auto;"><b>[{pastor_title}]</b><br><br>{pastor_content.replace(chr(10), "<br>")}</div>', unsafe_allow_html=True)
             
             st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
@@ -160,7 +161,7 @@ with tab0:
             st.markdown('<div class="board-title" style="background-color: #ffcc80;">💬 [ 말씀 묵상 나눔 ]</div>', unsafe_allow_html=True)
             st.markdown(get_smart_scroll_html("scroll_muksang", 550, muksang_list), unsafe_allow_html=True)
 
-    # 💡 자율주행 모터 설정: 목회자 묵상 자료는 빼고, 나머지 4개만 등록했습니다!
+    # 💡 모터 스크립트: 4개의 구역이 멈추지 않고 부드럽게 돌아갑니다!
     components.html(
         """
         <script>
@@ -170,7 +171,7 @@ with tab0:
                 {id: 'scroll_bible', speed: 40},
                 {id: 'scroll_gamsa', speed: 40},
                 {id: 'scroll_gido', speed: 40},
-                {id: 'scroll_muksang', speed: 40} // 💡 묵상 나눔 게시판 자동 스크롤 등록!
+                {id: 'scroll_muksang', speed: 40} // 말씀 묵상 나눔도 완벽 등록!
             ];
             
             boxes.forEach(item => {
@@ -185,7 +186,8 @@ with tab0:
                     box.addEventListener('touchend', () => setTimeout(() => isHovered=false, 1500));
                     
                     setInterval(() => {
-                        if (!isHovered) {
+                        // 💡 글이 길어서 '진짜 스크롤'이 생겼을 때만 모터가 작동합니다!
+                        if (!isHovered && box.scrollHeight > box.clientHeight) {
                             box.scrollTop += 1;
                             if (Math.ceil(box.scrollTop) + box.clientHeight >= box.scrollHeight) {
                                 box.scrollTop = 0;
