@@ -18,7 +18,6 @@ headers = {
     "Notion-Version": "2022-06-28"
 }
 
-# --- 💡 작성자(author) 정보가 노션으로 전송되도록 업데이트! ---
 def send_to_notion(title, category, content, date_str, author):
     url = "https://api.notion.com/v1/pages"
     data = {
@@ -27,20 +26,18 @@ def send_to_notion(title, category, content, date_str, author):
             "이름": { "title": [{"text": {"content": title}}] },
             "카테고리": { "select": {"name": category} },
             "날짜": { "date": {"start": date_str} },
-            "작성자": { "rich_text": [{"text": {"content": author}}] }, # 작성자 추가!
+            "작성자": { "rich_text": [{"text": {"content": author}}] },
             "내용": { "rich_text": [{"text": {"content": content}}] }
         }
     }
     response = requests.post(url, headers=headers, data=json.dumps(data))
     return response.status_code
 
-# --- 💡 기존 글에 댓글/공감을 업데이트하는 기능 추가! ---
 def update_notion_page(page_id, properties):
     url = f"https://api.notion.com/v1/pages/{page_id}"
     data = {"properties": properties}
     requests.patch(url, headers=headers, data=json.dumps(data))
 
-# --- 데이터 읽어오기 함수들 ---
 def get_from_notion():
     url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
     payload = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
@@ -77,7 +74,6 @@ now = int(time.time())
 st.markdown(f'<a href="/?v={now}" target="_self" style="text-decoration: none; color: inherit;"><h1 style="margin-bottom: 0px; cursor: pointer;">🌿 토다 공동체 나눔방</h1></a>', unsafe_allow_html=True)
 st.subheader("예수님을 닮아가는 우리의 매일의 기록")
 
-# 💡 이름이 "🏠 토다 광장"으로 변경되었습니다!
 tab0, tab1, tab2, tab3, tab4 = st.tabs(["🏠 토다 광장", "📖 매일 성경", "🙏 말씀과 기도", "📝 나눔 작성", "💬 나눔 모아보기"])
 
 # --- [탭 0] 🏠 토다 광장 ---
@@ -151,7 +147,7 @@ with tab0:
             st.markdown('<div class="board-title" style="background-color: #ffcc80;">💬 [ 말씀 묵상 나눔 ]</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="auto-scroll-box" style="height: 550px;"><div class="scroll-content" style="animation-duration: 25s;">{muksang_list}</div></div>', unsafe_allow_html=True)
 
-# --- [탭 1] 매일 성경 --- (생략 없이 유지)
+# --- [탭 1] 매일 성경 ---
 with tab1:
     st.subheader("📖 달력을 눌러 매일 성경을 확인하세요")
     selected_date = st.date_input("날짜 선택", datetime.date.today())
@@ -168,11 +164,8 @@ with tab1:
                 st.success(f"**오늘의 주제:** {title}")
                 st.write(f"📖 **읽을 본문:** {verses}")
 
-# --- 공통 함수: 상세글 & 공감/댓글 UI 그려주기 ---
 def render_post_with_reactions(page, title_key, category_key=None):
     page_id = page["id"]
-    
-    # 데이터 파싱 (제목, 내용, 날짜, 작성자)
     try: title = page["properties"][title_key]["title"][0]["plain_text"]
     except: title = "제목 없음"
     category_str = ""
@@ -186,11 +179,9 @@ def render_post_with_reactions(page, title_key, category_key=None):
     try: author = page["properties"]["작성자"]["rich_text"][0]["plain_text"]
     except: author = "익명"
 
-    # 공감 데이터 (JSON 파싱)
     try: reactions = json.loads(page["properties"]["공감"]["rich_text"][0]["plain_text"])
     except: reactions = {"👍":0, "🙏":0, "❤️":0, "✨":0, "😊":0, "💡":0, "🙌":0}
     
-    # 댓글 데이터 (JSON 파싱)
     try: comments = json.loads(page["properties"]["댓글"]["rich_text"][0]["plain_text"])
     except: comments = []
 
@@ -198,34 +189,28 @@ def render_post_with_reactions(page, title_key, category_key=None):
         st.write(content)
         st.divider()
         
-        # 1. 긍정 이모티콘 7가지 버튼 배열
         emojis = ["👍", "🙏", "❤️", "✨", "😊", "💡", "🙌"]
         cols = st.columns(7)
         for i, em in enumerate(emojis):
             count = reactions.get(em, 0)
             if cols[i].button(f"{em} {count}", key=f"emo_{page_id}_{em}"):
-                reactions[em] = count + 1 # 클릭하면 1 증가
-                # 노션에 저장
+                reactions[em] = count + 1
                 update_data = { "공감": { "rich_text": [{"text": {"content": json.dumps(reactions, ensure_ascii=False)}}] } }
                 update_notion_page(page_id, update_data)
-                st.rerun() # 화면 새로고침해서 숫자 올리기
+                st.rerun()
                 
-        # 2. 댓글 목록 보여주기
         if comments:
             st.markdown("---")
             for c in comments:
                 st.markdown(f"💬 **{c['name']}**: {c['msg']}")
                 
-        # 3. 새 댓글 작성창
         with st.form(f"comment_form_{page_id}"):
             c1, c2 = st.columns([1, 4])
             with c1: c_name = st.text_input("이름", key=f"cname_{page_id}")
             with c2: c_msg = st.text_input("댓글 남기기", key=f"cmsg_{page_id}")
             c_submit = st.form_submit_button("댓글 등록")
-            
             if c_submit and c_name and c_msg:
                 comments.append({"name": c_name, "msg": c_msg})
-                # 노션에 댓글 저장
                 update_data = { "댓글": { "rich_text": [{"text": {"content": json.dumps(comments, ensure_ascii=False)}}] } }
                 update_notion_page(page_id, update_data)
                 st.rerun()
@@ -248,7 +233,7 @@ with tab3:
     with st.form("share_form"):
         col1, col2 = st.columns(2)
         with col1: input_date = st.date_input("날짜", datetime.date.today())
-        with col2: input_author = st.text_input("✍️ 작성자 이름 (필수)", placeholder="예: 홍길동 청년") # 💡 작성자 입력칸 추가!
+        with col2: input_author = st.text_input("✍️ 작성자 이름 (필수)", placeholder="예: 홍길동 청년")
         
         input_title = st.text_input("제목 (예: 오늘 하루도 지켜주심에 감사합니다)")
         input_category = st.selectbox("카테고리", ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"])
@@ -272,7 +257,17 @@ with tab4:
     st.divider()
     with st.spinner("나눔을 불러오는 중입니다..."):
         user_res = get_from_notion().get("results", [])
-        filtered_posts = [p for p in user_res if p.get("properties", {}).get("카테고리", {}).get("select", {}).get("name") in ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"]]
+        
+        # 💡 에러가 났던 부분을 'try-except' 안전망으로 감싸서 빈칸이 있어도 부드럽게 넘어가도록 고쳤습니다!
+        filtered_posts = []
+        for p in user_res:
+            try:
+                cat = p["properties"]["카테고리"]["select"]["name"]
+            except Exception: # 카테고리가 비어있으면 무시합니다!
+                cat = ""
+                
+            if cat in ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"]:
+                filtered_posts.append(p)
         
         if not filtered_posts: st.info("아직 등록된 나눔이 없습니다.")
         else:
