@@ -53,37 +53,18 @@ def get_pastor_data():
     payload = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
     return requests.post(url, headers=headers, json=payload).json()
 
-# --- 💡 새로운 '자유형 스마트 스크롤 모터' (JS) ---
+# --- 💡 버그가 수정된 '자유형 스마트 스크롤 모터' ---
 def get_smart_scroll_html(box_id, height, content, speed=40):
+    # 화면 밖으로 글자가 새어나오지 않도록 줄바꿈과 주석을 없애고 한 줄로 꽉 압축했습니다!
+    js_code = f"let box=document.getElementById('{box_id}');if(box && !box.dataset.scrolling){{box.dataset.scrolling='true';let isHovered=false;box.addEventListener('mouseenter',()=>isHovered=true);box.addEventListener('mouseleave',()=>isHovered=false);box.addEventListener('touchstart',()=>isHovered=true);box.addEventListener('touchend',()=>setTimeout(()=>isHovered=false,1500));setInterval(()=>{{if(!isHovered){{box.scrollTop+=1;if(Math.ceil(box.scrollTop)>=box.scrollHeight-box.clientHeight){{box.scrollTop=0;}}}}}}, {speed});}}"
+    
     return f"""
     <div id="{box_id}" class="smart-scroll-box" style="height: {height}px;">
         <div style="display: flex; flex-direction: column; gap: 15px;">
             {content}
         </div>
     </div>
-    <img src="x" onerror="
-        let box = document.getElementById('{box_id}');
-        if (box && !box.dataset.scrolling) {{
-            box.dataset.scrolling = 'true';
-            let isHovered = false;
-            
-            /* 마우스나 손가락이 닿으면 스크롤 멈춤 (자유 조종 가능) */
-            box.addEventListener('mouseenter', () => isHovered = true);
-            box.addEventListener('mouseleave', () => isHovered = false);
-            box.addEventListener('touchstart', () => isHovered = true);
-            box.addEventListener('touchend', () => setTimeout(() => isHovered = false, 1500));
-            
-            /* 자동 스크롤 모터 가동 */
-            setInterval(() => {{
-                if(!isHovered) {{
-                    box.scrollTop += 1; // 일정한 속도로 내려감
-                    if(Math.ceil(box.scrollTop) >= box.scrollHeight - box.clientHeight) {{
-                        box.scrollTop = 0; // 끝에 닿으면 다시 위로!
-                    }}
-                }}
-            }}, {speed});
-        }}
-    " style="display:none;">
+    <img src="x" style="display:none;" onerror="{js_code}">
     """
 
 # ==========================================
@@ -91,7 +72,6 @@ def get_smart_scroll_html(box_id, height, content, speed=40):
 # ==========================================
 st.set_page_config(page_title="토다 나눔방", page_icon="🌿", layout="wide")
 
-# 💡 CSS 수정: 애니메이션을 지우고, 언제든 수동 스크롤이 가능한 박스 형태로 변경했습니다!
 st.markdown("""
 <style>
     .smart-scroll-box { overflow-y: auto; padding: 15px; background: white; border: 1px solid #eee; border-radius: 0 0 10px 10px; }
@@ -162,7 +142,6 @@ with tab0:
         if not gamsa_list: gamsa_list = "<div class='post-item'>최근 3일간 올라온 감사 나눔이 없습니다.</div>"
         if not gido_list: gido_list = "<div class='post-item'>최근 3일간 올라온 기도제목이 없습니다.</div>"
 
-        # 💡 스마트 스크롤 모터 적용 (속도: 40 = 1픽셀당 40ms, 읽기 가장 편안한 속도)
         col1, col2, col3 = st.columns([1, 1.2, 1])
         with col1:
             st.markdown(f'<div class="board-title" style="background-color: #ffd54f;">📖 [ 오늘의 성경 본문 ]<br>{bible_title}</div>', unsafe_allow_html=True)
