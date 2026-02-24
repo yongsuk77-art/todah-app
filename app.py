@@ -53,13 +53,17 @@ def get_pastor_data():
     payload = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
     return requests.post(url, headers=headers, json=payload).json()
 
-# --- 💡 완벽해진 '자율주행 스마트 스크롤 모터' ---
+# --- 💡 파이썬이 지워도 절대 죽지 않는 '좀비 스크롤 모터' ---
 def get_smart_scroll_html(box_id, height, content, speed=40):
-    # 모터가 두 번 켜지지 않게 방지하고, 마우스를 올리면 멈추고 직접 스크롤 가능하게 만드는 마법입니다.
-    js_code = f"if(!window.{box_id}_run){{ window.{box_id}_run=true; setInterval(function(){{ var b=document.getElementById('{box_id}'); if(b && b.dataset.hover!=='1'){{ b.scrollTop+=1; if(b.scrollTop+b.clientHeight>=b.scrollHeight-1) b.scrollTop=0; }} }}, {speed}); }}"
+    # 모터를 화면 바깥(window)에 숨겨두어 새로고침해도 계속 작동하게 만듭니다!
+    js_code = f"if(!window['timer_{box_id}']){{ window['timer_{box_id}'] = setInterval(function(){{ var b = window.parent.document.getElementById('{box_id}') || document.getElementById('{box_id}'); if(b && b.dataset.hover !== '1'){{ b.scrollTop += 1; if(b.scrollTop + b.clientHeight >= b.scrollHeight - 1){{ b.scrollTop = 0; }} }} }}, {speed}); }}"
     
     return f"""
-    <div id="{box_id}" class="smart-scroll-box" style="height: {height}px;" onmouseenter="this.dataset.hover='1'" onmouseleave="this.dataset.hover='0'" ontouchstart="this.dataset.hover='1'" ontouchend="setTimeout(()=>this.dataset.hover='0', 1500)">
+    <div id="{box_id}" class="smart-scroll-box" style="height: {height}px;" 
+         onmouseenter="this.dataset.hover='1'" 
+         onmouseleave="this.dataset.hover='0'" 
+         ontouchstart="this.dataset.hover='1'" 
+         ontouchend="setTimeout(()=>this.dataset.hover='0', 1500)">
         <div style="display: flex; flex-direction: column; gap: 15px;">
             {content}
         </div>
@@ -148,20 +152,20 @@ with tab0:
             st.markdown(get_smart_scroll_html("scroll_bible", 550, bible_verses.replace(chr(10), "<br>")), unsafe_allow_html=True)
         with col2:
             st.markdown('<div class="board-title" style="background-color: #a5d6a7;">🌿 [ 오늘의 성경 본문 묵상 자료 ]</div>', unsafe_allow_html=True)
-            # 💡 목사님 묵상 칸을 넓게(380px) 키웠습니다! (자동 스크롤도 동일하게 달아드렸습니다)
-            st.markdown(get_smart_scroll_html("scroll_pastor", 380, f"<b>[{pastor_title}]</b><br><br>{pastor_content.replace(chr(10), '<br>')}", speed=50), unsafe_allow_html=True)
+            # 💡 목사님 묵상 칸을 아주 시원하게(400px) 키우고 자동 스크롤을 달았습니다!
+            st.markdown(get_smart_scroll_html("scroll_pastor", 400, f"<b>[{pastor_title}]</b><br><br>{pastor_content.replace(chr(10), '<br>')}", speed=50), unsafe_allow_html=True)
             
-            st.markdown('<div style="height: 20px;"></div>', unsafe_allow_html=True) # 중간 여백
+            st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
             
             col2_1, col2_2 = st.columns(2)
             with col2_1:
                 st.markdown('<div class="board-title" style="background-color: #e1bee7;">🙏 감사나눔</div>', unsafe_allow_html=True)
-                # 💡 감사나눔 칸을 귀엽게(120px) 줄였습니다!
-                st.markdown(get_smart_scroll_html("scroll_gamsa", 120, gamsa_list), unsafe_allow_html=True)
+                # 💡 감사나눔 칸을 아주 귀엽게(100px) 줄였습니다!
+                st.markdown(get_smart_scroll_html("scroll_gamsa", 100, gamsa_list), unsafe_allow_html=True)
             with col2_2:
                 st.markdown('<div class="board-title" style="background-color: #bbdefb;">💌 기도제목 나눔</div>', unsafe_allow_html=True)
-                # 💡 기도제목 칸을 귀엽게(120px) 줄였습니다!
-                st.markdown(get_smart_scroll_html("scroll_gido", 120, gido_list), unsafe_allow_html=True)
+                # 💡 기도제목 칸을 아주 귀엽게(100px) 줄였습니다!
+                st.markdown(get_smart_scroll_html("scroll_gido", 100, gido_list), unsafe_allow_html=True)
         with col3:
             st.markdown('<div class="board-title" style="background-color: #ffcc80;">💬 [ 말씀 묵상 나눔 ]</div>', unsafe_allow_html=True)
             st.markdown(get_smart_scroll_html("scroll_muksang", 550, muksang_list), unsafe_allow_html=True)
@@ -261,7 +265,7 @@ with tab3:
         
     if submitted:
         if input_title == "" or input_content == "" or input_author == "":
-            st.warning("작성자, 제목, 내용을 무두 입력해 주세요! 😅")
+            st.warning("작성자, 제목, 내용을 모두 입력해 주세요! 😅")
         else:
             status = send_to_notion(input_title, input_category, input_content, str(input_date), input_author)
             if status == 200:
