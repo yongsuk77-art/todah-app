@@ -2,15 +2,15 @@ import streamlit as st
 import requests
 import json
 import datetime
-import time  # 💡 이 줄을 새롭게 추가해 주세요!
+import time
 
 # ==========================================
-# 1. API 키 설정 (4개의 열쇠 모두 장착!)
+# 1. API 키 설정 (4개의 열쇠)
 # ==========================================
 NOTION_TOKEN = st.secrets["NOTION_TOKEN"]
-DATABASE_ID = st.secrets["DATABASE_ID"]     # 성도 나눔방
-BIBLE_DB_ID = st.secrets["BIBLE_DB_ID"]     # 매일 성경
-PASTOR_DB_ID = st.secrets["PASTOR_DB_ID"]   # 말씀과 기도 (목회자 전용)
+DATABASE_ID = st.secrets["DATABASE_ID"]
+BIBLE_DB_ID = st.secrets["BIBLE_DB_ID"]
+PASTOR_DB_ID = st.secrets["PASTOR_DB_ID"]
 
 headers = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
@@ -18,14 +18,15 @@ headers = {
     "Notion-Version": "2022-06-28"
 }
 
-# --- 데이터 보내기 (성도 나눔방) ---
-def send_to_notion(title, category, content):
+# --- 데이터 보내기 (성도 나눔방) - 💡 날짜(date_str) 추가됨! ---
+def send_to_notion(title, category, content, date_str):
     url = "https://api.notion.com/v1/pages"
     data = {
         "parent": { "database_id": DATABASE_ID },
         "properties": {
             "이름": { "title": [{"text": {"content": title}}] },
             "카테고리": { "select": {"name": category} },
+            "날짜": { "date": {"start": date_str} },  # 💡 노션의 '날짜' 기둥으로 쏙!
             "내용": { "rich_text": [{"text": {"content": content}}] }
         }
     }
@@ -64,8 +65,8 @@ def get_pastor_data():
 # ==========================================
 st.set_page_config(page_title="토다 나눔방", page_icon="🌿")
 
-# 💡 매번 바뀌는 무한 새로고침 마법 코드
-now = int(time.time()) # 접속할 때마다 초 단위로 바뀌는 새로운 숫자를 만듭니다.
+# 💡 매번 바뀌는 무한 새로고침 마법
+now = int(time.time())
 st.markdown(
     f"""
     <a href="/?v={now}" target="_self" style="text-decoration: none; color: inherit;">
@@ -74,7 +75,6 @@ st.markdown(
     """, 
     unsafe_allow_html=True
 )
-
 st.subheader("예수님을 닮아가는 우리의 매일의 기록")
 
 tab1, tab2, tab3, tab4 = st.tabs(["📖 매일 성경", "🙏 말씀과 기도", "📝 나눔 작성", "💬 나눔 모아보기"])
@@ -116,19 +116,13 @@ with tab2:
             st.info("아직 올라온 자료가 없습니다.")
         else:
             for page in results:
-                # 💡 노션 표의 '말씀과 기도' 기둥에서 제목 가져오기
                 try: title = page["properties"]["말씀과 기도"]["title"][0]["plain_text"]
                 except: title = "제목 없음"
-                
-                # 💡 내용 가져오기
                 try: content = page["properties"]["내용"]["rich_text"][0]["plain_text"]
                 except: content = "내용이 없습니다."
-                
-                # 💡 '날짜' 기둥에서 날짜 가져오기 (비어있으면 자동 생성일로 대체)
                 try: date_str = page["properties"]["날짜"]["date"]["start"]
                 except: date_str = page["created_time"].split("T")[0]
 
-                # 카테고리 없이 깔끔하게 제목과 날짜만 띄우기
                 with st.expander(f"📅 {date_str} | {title}"):
                     st.write(content)
 
@@ -136,6 +130,9 @@ with tab2:
 with tab3:
     st.write("공동체와 함께 감사와 기도제목을 나누는 공간입니다.")
     with st.form("share_form"):
+        # 💡 날짜 선택 기능 추가! (기본값은 오늘 날짜가 뜹니다)
+        input_date = st.date_input("날짜", datetime.date.today())
+        
         input_title = st.text_input("제목 (예: 오늘 하루도 지켜주심에 감사합니다)")
         input_category = st.selectbox("카테고리", ["묵상나눔", "감사나눔", "기도제목 나눔", "모두 나눔"])
         input_content = st.text_area("나눌 내용을 자유롭게 적어주세요", height=200)
@@ -145,7 +142,8 @@ with tab3:
         if input_title == "" or input_content == "":
             st.warning("제목과 내용을 모두 입력해 주세요! 😅")
         else:
-            status = send_to_notion(input_title, input_category, input_content)
+            # 💡 입력받은 날짜(input_date)를 문자열로 변환해서 노션으로 보냅니다!
+            status = send_to_notion(input_title, input_category, input_content, str(input_date))
             if status == 200:
                 st.success(f"할렐루야! '{input_title}' 글이 등록되었습니다! 🎉")
                 st.balloons()
@@ -180,8 +178,10 @@ with tab4:
                 except: category = "분류 없음"
                 try: content = page["properties"]["내용"]["rich_text"][0]["plain_text"]
                 except: content = "내용이 없습니다."
-                try: date_str = page["created_time"].split("T")[0]
-                except: date_str = "날짜 알 수 없음"
+                
+                # 💡 노션의 '날짜' 기둥에서 우선 가져오고, 비어있으면 작성일로 표시
+                try: date_str = page["properties"]["날짜"]["date"]["start"]
+                except: date_str = page["created_time"].split("T")[0]
 
                 with st.expander(f"📅 {date_str} | [{category}] {title}"):
                     st.write(content)
