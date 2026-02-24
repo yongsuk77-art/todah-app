@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components  # 💡 공식 자바스크립트 실행 도구 추가!
 import requests
 import json
 import datetime
@@ -53,18 +54,14 @@ def get_pastor_data():
     payload = {"sorts": [{"timestamp": "created_time", "direction": "descending"}]}
     return requests.post(url, headers=headers, json=payload).json()
 
-# --- 💡 서버 차단을 피하는 안전한 '방탄 스마트 스크롤 모터' ---
-def get_smart_scroll_html(box_id, height, content, speed=40):
-    # 보안 에러 없이 독립적으로 안전하게 돌아가는 순수 자바스크립트입니다.
-    js_code = f"var box = document.getElementById('{box_id}'); if (box && box.dataset.init !== '1') {{ box.dataset.init = '1'; box.dataset.hover = '0'; box.addEventListener('mouseenter', ()=>box.dataset.hover='1'); box.addEventListener('mouseleave', ()=>box.dataset.hover='0'); box.addEventListener('touchstart', ()=>box.dataset.hover='1'); box.addEventListener('touchend', ()=>setTimeout(()=>box.dataset.hover='0', 1500)); setInterval(function() {{ if (box.dataset.hover === '0') {{ box.scrollTop += 1; if (Math.ceil(box.scrollTop) + box.clientHeight >= box.scrollHeight) {{ box.scrollTop = 0; }} }} }}, {speed}); }}"
-    
+# --- 💡 차단되는 꼼수를 없애고, 순수하게 화면(HTML)만 그리는 함수 ---
+def get_smart_scroll_html(box_id, height, content):
     return f"""
     <div id="{box_id}" class="smart-scroll-box" style="height: {height}px; overflow-y: auto;">
         <div style="display: flex; flex-direction: column; gap: 15px; padding-bottom: 50px;">
             {content}
         </div>
     </div>
-    <img src="x" style="display:none;" onerror="{js_code}">
     """
 
 # ==========================================
@@ -148,23 +145,66 @@ with tab0:
             st.markdown(get_smart_scroll_html("scroll_bible", 550, bible_verses.replace(chr(10), "<br>")), unsafe_allow_html=True)
         with col2:
             st.markdown('<div class="board-title" style="background-color: #a5d6a7;">🌿 [ 오늘의 성경 본문 묵상 자료 ]</div>', unsafe_allow_html=True)
-            # 💡 가운데 묵상 자료를 380px로 크게 늘렸습니다!
-            st.markdown(get_smart_scroll_html("scroll_pastor", 380, f"<b>[{pastor_title}]</b><br><br>{pastor_content.replace(chr(10), '<br>')}", speed=45), unsafe_allow_html=True)
+            st.markdown(get_smart_scroll_html("scroll_pastor", 380, f"<b>[{pastor_title}]</b><br><br>{pastor_content.replace(chr(10), '<br>')}"), unsafe_allow_html=True)
             
             st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
             
             col2_1, col2_2 = st.columns(2)
             with col2_1:
                 st.markdown('<div class="board-title" style="background-color: #e1bee7;">🙏 감사나눔</div>', unsafe_allow_html=True)
-                # 💡 감사나눔 칸을 130px로 아기자기하게 줄였습니다!
                 st.markdown(get_smart_scroll_html("scroll_gamsa", 130, gamsa_list), unsafe_allow_html=True)
             with col2_2:
                 st.markdown('<div class="board-title" style="background-color: #bbdefb;">💌 기도제목 나눔</div>', unsafe_allow_html=True)
-                # 💡 기도제목 칸을 130px로 아기자기하게 줄였습니다!
                 st.markdown(get_smart_scroll_html("scroll_gido", 130, gido_list), unsafe_allow_html=True)
         with col3:
             st.markdown('<div class="board-title" style="background-color: #ffcc80;">💬 [ 말씀 묵상 나눔 ]</div>', unsafe_allow_html=True)
             st.markdown(get_smart_scroll_html("scroll_muksang", 550, muksang_list), unsafe_allow_html=True)
+
+    # 💡 [핵심 해결책] 스트림릿이 절대 막을 수 없는 공식 자바스크립트 모터를 화면 마지막에 강력하게 주입합니다!
+    components.html(
+        """
+        <script>
+        function startAutoScroll() {
+            const parentDoc = window.parent.document;
+            const boxes = [
+                {id: 'scroll_bible', speed: 40},
+                {id: 'scroll_pastor', speed: 45},
+                {id: 'scroll_gamsa', speed: 40},
+                {id: 'scroll_gido', speed: 40},
+                {id: 'scroll_muksang', speed: 40}
+            ];
+            
+            boxes.forEach(item => {
+                const box = parentDoc.getElementById(item.id);
+                if (box && box.dataset.init !== '1') {
+                    box.dataset.init = '1';
+                    let isHovered = false;
+                    
+                    // 마우스나 터치 시 스크롤 중지 (수동 조작 가능)
+                    box.addEventListener('mouseenter', () => isHovered = true);
+                    box.addEventListener('mouseleave', () => isHovered = false);
+                    box.addEventListener('touchstart', () => isHovered = true);
+                    box.addEventListener('touchend', () => setTimeout(() => isHovered=false, 1500));
+                    
+                    // 일정한 속도로 스크롤을 내리는 모터 실행
+                    setInterval(() => {
+                        if (!isHovered) {
+                            box.scrollTop += 1;
+                            // 바닥에 닿으면 다시 맨 위로
+                            if (Math.ceil(box.scrollTop) + box.clientHeight >= box.scrollHeight) {
+                                box.scrollTop = 0;
+                            }
+                        }
+                    }, item.speed);
+                }
+            });
+        }
+        // 화면이 다 그려지고 나서 안전하게 실행되도록 1초 기다립니다.
+        setTimeout(startAutoScroll, 1000);
+        </script>
+        """,
+        height=0, width=0
+    )
 
 # --- [탭 1] 매일 성경 ---
 with tab1:
