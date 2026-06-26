@@ -77,6 +77,47 @@ st.markdown("""
     .smart-scroll-box::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     .board-title { font-weight: bold; text-align: center; padding: 12px; border-radius: 10px 10px 0 0; color: #333; margin-bottom: 0; }
     .post-item { border-bottom: 1px dashed #ddd; padding-bottom: 10px; margin-bottom: 10px; font-size: 0.95em; line-height: 1.5; }
+
+    /* ==========================================================
+       💻📱 반응형(화면 크기 자동 감지) 설정
+       - 접속한 기기의 화면 너비를 브라우저가 스스로 보고
+         웹(넓게) / 핸드폰(좁게) 레이아웃을 자동으로 선택합니다.
+       ========================================================== */
+
+    /* [기본/데스크탑] 웹에서는 화면을 시원하게 꽉 채워서 보여줍니다. */
+    .block-container {
+        max-width: 1400px !important;
+        padding-top: 2rem !important;
+        padding-left: 3rem !important;
+        padding-right: 3rem !important;
+    }
+
+    /* [태블릿] 너비 1024px 이하 */
+    @media (max-width: 1024px) {
+        .block-container {
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+        }
+    }
+
+    /* [핸드폰] 너비 768px 이하 - 여백을 줄이고 글상자 높이를
+       화면 높이에 맞게 자동으로 조절합니다. */
+    @media (max-width: 768px) {
+        .block-container {
+            padding-top: 1rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+        }
+        /* 고정 픽셀 높이 대신 화면 높이 기준(vh)으로 자동 조절 */
+        .smart-scroll-box {
+            height: auto !important;
+            max-height: 45vh !important;
+            padding: 12px !important;
+        }
+        h1 { font-size: 1.6rem !important; }
+        .board-title { padding: 8px !important; font-size: 0.95em !important; }
+        .post-item { font-size: 0.9em !important; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
